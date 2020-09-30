@@ -1,0 +1,7 @@
+resolver: lts-16.16
+
+packages:
+- arith
+
+ghc-options:
+  "$everything": -haddock
