@@ -17,10 +17,12 @@ main = do
       case result of
         Right ts -> forM_ ts $ \term -> do
           let reducedTerm = eval term
-          putStrLn $ show term 
-            ++ "    =>    " ++ show reducedTerm
+          putStrLn
+            $  show term
+            ++ "\n  => "
+            ++ show reducedTerm
             ++ (if isval reducedTerm then "" else " (not a value)")
-        Left err -> putStrLn $ show err
+        Left err -> print err
     _ -> putStrLn "stack run examples/test.f"
 
 
