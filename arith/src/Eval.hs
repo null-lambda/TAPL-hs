@@ -1,15 +1,15 @@
 module Eval where
 import           Syntax
 
-isnumerical :: Term -> Bool
-isnumerical TmZero      = True
-isnumerical (TmSucc t1) = isnumerical t1
-isnumerical _           = False
+isNumerical :: Term -> Bool
+isNumerical TmZero      = True
+isNumerical (TmSucc t1) = isNumerical t1
+isNumerical _           = False
 
-isval :: Term -> Bool
-isval TmTrue  = True
-isval TmFalse = True
-isval t | isnumerical t = True
+isVal :: Term -> Bool
+isVal TmTrue  = True
+isVal TmFalse = True
+isVal t | isNumerical t = True
         | otherwise     = False
 
 
@@ -37,7 +37,7 @@ instance Show Term where
   show (TmIf t1 t2 t3) =
     "if " ++ show t1 ++ " then " ++ show t2 ++ " else " ++ show t3
   show TmZero = "0"
-  show (TmSucc t) | isnumerical t = showAsNum t 1
+  show (TmSucc t) | isNumerical t = showAsNum t 1
                   | otherwise     = "(succ " ++ show t ++ ")"
    where
     showAsNum TmZero     num = show num

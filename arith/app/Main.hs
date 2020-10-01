@@ -1,6 +1,7 @@
 module Main where
 
 import           Eval
+import qualified Eval.Bigstep                  as BS
 import           Syntax
 import           SyntaxParser
 import           Control.Monad
@@ -13,15 +14,18 @@ main = do
   args <- getArgs
   case args of
     [sourceFile] -> do
-      result <- parse program "arith" <$> readFile sourceFile
+      result <- parse program "main" <$> readFile sourceFile
       case result of
         Right ts -> forM_ ts $ \term -> do
           let reducedTerm = eval term
           putStrLn
-            $  show term
-            ++ "\n  => "
-            ++ show reducedTerm
-            ++ (if isval reducedTerm then "" else " (not a value)")
+            $  "Eval:  " ++ show term
+            ++ "\n   =>  "
+            ++ show (eval term)
+            ++ "  (Small-step)"
+            ++ "\n   =>  "
+            ++ show (BS.eval term)
+            ++ "  (Big-step) "
         Left err -> print err
     _ -> putStrLn "stack run examples/test.f"
 

@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 3fb11364e65a038f5c25a6c8ecb4b8e73f571d07cb0cf361bf203ffdc211f022
+-- hash: c6161c5e99aa7f89e4cf55ffd8626689f6e970a5def32809a4f53168dbd42d34
 
 name:           arith
 version:        0.1.0.0
@@ -24,6 +24,7 @@ source-repository head
 library
   exposed-modules:
       Eval
+      Eval.Bigstep
       Syntax
       SyntaxParser
   other-modules:
