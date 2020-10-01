@@ -3,6 +3,7 @@ resolver: lts-16.16
 packages:
 - arith
 - tyarith
+- untyped
 
 ghc-options:
   "$everything": -haddock
