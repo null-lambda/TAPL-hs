@@ -7,7 +7,9 @@ where
 import           Control.Monad                  ( void )
 import           Data.Functor
 import           Data.Functor.Identity
-import           Text.Parsec             hiding ( spaces , Parser)
+import           Text.Parsec             hiding ( spaces
+                                                , Parser
+                                                )
 import qualified Text.Parsec.Token             as T
 import           Syntax
 
@@ -47,20 +49,33 @@ tmVar = do
   return $ TmVar i n
 tmAbs = do
   ctx <- getState
-  s   <- reserved "lambda" >> identifier
-  setState (s : ctx)
-  t1 <- dot >> term
+  reserved "lambda" <|> void (symbol "\\")
+  vs <- many1 identifier
+  dot
+  setState (reverse vs ++ ctx)
+  t1 <- term
   setState ctx
-  return $ TmAbs s t1
+  return $ foldr TmAbs t1 vs
+{-
+tmAbs = do
+  ctx <- getState
+  reserved "lambda" <|> void (symbol "\\")
+  v <- identifier
+  dot
+  setState (v : ctx)
+  t1 <- term
+  setState ctx
+  return $ TmAbs v t1
+-}
 tmApp = chainl1 (tmAbs <|> tmVar <|> parens term) (return TmApp)
 term = tmApp
 
 eval = Eval <$> term
 
 binder = (<* symbol "/")
-bind = do 
-  ctx <- getState 
-  s <- identifier
+bind = do
+  ctx <- getState
+  s   <- identifier
   setState (s : ctx)
   binder . return $ Bind s
 

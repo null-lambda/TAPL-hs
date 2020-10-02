@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 54f1456e18843c547facdfa25eefba69b54ec50be43ee1ca878689dbfe603923
+-- hash: 30be64fc426d52da2d3678b4f3ea2b0a0acfb3f3df06d9b9e57b08d9ec5b4ad1
 
 name:           untyped
 version:        0.1.0.0
@@ -24,6 +24,11 @@ source-repository head
 library
   exposed-modules:
       Eval
+      Eval.Bigstep
+      Eval.Bigstep.CallByName
+      Eval.Bigstep.Normal
+      Eval.CallByName
+      Eval.Normal
       Syntax
       SyntaxParser
   other-modules:
