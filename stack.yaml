@@ -4,6 +4,7 @@ packages:
 - arith
 - tyarith
 - untyped
+- simplebool
 
 ghc-options:
   "$everything": -haddock
