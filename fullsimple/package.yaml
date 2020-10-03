@@ -1,12 +1,12 @@
-name:                simplebool
+name:                fullsimple
 version:             0.1.0.0
-github:              "githubuser/simplebool"
+github:              "githubuser/fullsimple"
 license:             BSD3
 author:              "Author name here"
 maintainer:          "example@example.com"
 copyright:           "2020 Author name here"
 
-description:         Please see the README on GitHub at <https://github.com/githubuser/simplebool#readme>
+description:         Please see the README on GitHub at <https://github.com/githubuser/fullsimple#readme>
 
 dependencies:
 - base >= 4.7 && < 5
@@ -18,7 +18,7 @@ library:
   source-dirs: src
 
 executables:
-  simplebool-exe:
+  fullsimple-exe:
     main:                Main.hs
     source-dirs:         app
     ghc-options:
@@ -26,4 +26,4 @@ executables:
     - -rtsopts
     - -with-rtsopts=-N
     dependencies:
-    - simplebool
+    - fullsimple

@@ -5,6 +5,7 @@ packages:
 - tyarith
 - untyped
 - simplebool
+- fullsimple
 
 ghc-options:
   "$everything": -haddock

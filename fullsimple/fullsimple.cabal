@@ -4,13 +4,13 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 5569c603621f4a411df93cc5b99b3e10246a6d64a5134edd35923e47b4c71acd
+-- hash: 8ca34918726fb4474f4c08e039bbbdaf5d374ca2cbd0bca73395622ecc1994a3
 
-name:           simplebool
+name:           fullsimple
 version:        0.1.0.0
-description:    Please see the README on GitHub at <https://github.com/githubuser/simplebool#readme>
-homepage:       https://github.com/githubuser/simplebool#readme
-bug-reports:    https://github.com/githubuser/simplebool/issues
+description:    Please see the README on GitHub at <https://github.com/githubuser/fullsimple#readme>
+homepage:       https://github.com/githubuser/fullsimple#readme
+bug-reports:    https://github.com/githubuser/fullsimple/issues
 author:         Author name here
 maintainer:     example@example.com
 copyright:      2020 Author name here
@@ -19,7 +19,7 @@ build-type:     Simple
 
 source-repository head
   type: git
-  location: https://github.com/githubuser/simplebool
+  location: https://github.com/githubuser/fullsimple
 
 library
   exposed-modules:
@@ -27,7 +27,7 @@ library
       Syntax
       SyntaxParser
   other-modules:
-      Paths_simplebool
+      Paths_fullsimple
   hs-source-dirs:
       src
   build-depends:
@@ -37,17 +37,17 @@ library
     , transformers
   default-language: Haskell2010
 
-executable simplebool-exe
+executable fullsimple-exe
   main-is: Main.hs
   other-modules:
-      Paths_simplebool
+      Paths_fullsimple
   hs-source-dirs:
       app
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       base >=4.7 && <5
+    , fullsimple
     , megaparsec
     , mtl
-    , simplebool
     , transformers
   default-language: Haskell2010
