@@ -23,13 +23,15 @@ processCommand cmd = do
       let resultOp = return $! showTerm ctx $ eval ctx term
       result <- fromMaybe "[infinite loop]" <$> timeout 5000 resultOp
       putStrLn $ "   => " ++ result
-      putStrLn $ "    : " ++ either angular show (typeof ctx term) where 
-        angular s = "[" ++ s ++ "]"
-    CmdBind s ty -> do
-      let ctx' = (s, VarBind ty) : ctx
-      put ctx'
-      let showBind (s, b) = s ++ show b
-      liftIO . putStrLn $ "Context : " ++ intercalate ", " (map showBind ctx')
+      putStrLn $ "    : " ++ either angular (showType ctx) (typeof ctx term)
+      where angular s = "[" ++ s ++ "]"
+    CmdBind s b -> case checkBinding ctx b of
+      Right b' -> do
+        modify ((s, b') :)
+        ctx <- get
+        -- liftIO . putStrLn $ "Bind : " ++ (s ++ showBinding (ctx b')
+        liftIO . putStrLn $ "Context : " ++ showContext ctx
+      Left err -> liftIO $ putStrLn err
 
 processProgram :: String -> IO ()
 processProgram s =

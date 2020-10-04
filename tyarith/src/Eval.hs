@@ -1,14 +1,10 @@
 module Eval where
 
 import           Syntax
-import           Control.Monad.Except (throwError)
- 
+import           Control.Monad.Except           ( throwError )
+
 -- evaluation 
 
-isnumerical :: Term -> Bool
-isnumerical TmZero      = True
-isnumerical (TmSucc t1) = isnumerical t1
-isnumerical _           = False
 
 isval :: Term -> Bool
 isval TmTrue  = True
