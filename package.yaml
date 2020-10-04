@@ -1,0 +1,43 @@
+name: TAPL-hs
+version: 0.1.0.0
+github: "null-lambda/TAPL-hs"
+
+dependencies:
+  - base >= 4.7 && < 5
+  - megaparsec
+  - mtl
+  - transformers
+
+ghc-options:
+  - -threaded
+  - -rtsopts
+  - -with-rtsopts=-N
+
+executables:
+  arith:
+    main: Main.hs
+    source-dirs: "arith"
+    dependencies: 
+    - parsec
+
+  untyped:
+    main: Main.hs
+    source-dirs: "untyped"
+    dependencies:
+    - parsec
+
+  tyarith:
+    main: Main.hs
+    source-dirs: "tyarith"
+    dependencies: 
+    - parsec 
+
+  simplebool:
+    main: Main.hs
+    source-dirs: "simplebool"
+    dependencies: 
+    - parsec
+
+  fullsimple:
+    main: Main.hs
+    source-dirs: "fullsimple"

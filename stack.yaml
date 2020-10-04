@@ -1,11 +1,1 @@
 resolver: lts-16.16
-
-packages:
-- arith
-- tyarith
-- untyped
-- simplebool
-- fullsimple
-
-ghc-options:
-  "$everything": -haddock

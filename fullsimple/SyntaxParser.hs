@@ -160,8 +160,8 @@ tmNat = f <$> natural where
   f n = TmSucc $ f (n - 1)
 tmFloat = try $ TmFloat <$> float
 tmString = try $ TmString <$> stringLiteral
-tmConst = r <|> choice [tmString, tmFloat, tmNat] where
-  r = choice $ map
+tmConst = choice $ r ++ [tmString, tmFloat, tmNat] where
+  r = map
     (\(name, t) -> reserved name >> return t)
     [("unit", TmUnit), ("()", TmUnit), ("true", TmTrue), ("false", TmFalse)]
 tmUnaryFunc baseTerm = choice $ map
@@ -190,7 +190,6 @@ bind = try $ do
   b <- if isLower $ head x then tmBind else tyBind
   modify ((x, b) :)
   return $ CmdBind x b
-
 
 cmd :: Parser Command
 cmd = bind <|> eval

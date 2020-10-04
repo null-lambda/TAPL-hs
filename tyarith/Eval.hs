@@ -5,6 +5,11 @@ import           Control.Monad.Except           ( throwError )
 
 -- evaluation 
 
+isnumerical :: Term -> Bool
+isnumerical t = case t of
+  TmZero    -> True
+  TmSucc t1 -> isnumerical t1
+  _         -> False
 
 isval :: Term -> Bool
 isval TmTrue  = True
