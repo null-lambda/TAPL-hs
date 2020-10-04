@@ -7,12 +7,13 @@ import           SyntaxParser
 import           Control.Monad
 import           Control.Monad.IO.Class         ( liftIO )
 import           Control.Monad.Trans.State
-import           Data.List                      ( intercalate )
+import           Data.List
 import           Data.Maybe                     ( fromMaybe )
-import           System.Environment             ( getArgs )
+import           System.Environment
 import           System.IO.Error                ( tryIOError )
 import           System.Timeout                 ( timeout )
 import           Text.Megaparsec
+import           Text.Printf
 
 processCommand :: Command -> StateT Context IO ()
 processCommand cmd = do
@@ -44,17 +45,20 @@ processProgram s =
             ctx' <- execStateT (processCommand c) ctx
             loop cs ctx'
           loop [] _ = return ()
-        Left err -> putStrLn $ errorBundlePretty err
+        Left err -> do
+          putStrLn "parse error"
+          putStrLn $ errorBundlePretty err
 
 main :: IO ()
 main = do
-  args <- getArgs
+  args     <- getArgs
+  progName <- getProgName
   case args of
     [sourceFile] -> do
       result <- tryIOError (readFile sourceFile)
       case result of
         Left  err -> print err
         Right s   -> processProgram s
-    _ -> putStrLn "examples: untyped-exe examples\\test.f"
+    _ -> printf "Usage: %s examples\\test.f\n" progName
 
 
