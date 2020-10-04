@@ -1,16 +1,36 @@
 # TAPL-hs
-Sample codes of TAPL, rewritten in haskell for personal study.
+Example codes of TAPL, rewritten in haskell for personal study.
 
 [TAPL book](http://www.cis.upenn.edu/~bcpierce/tapl/main.html) \- B. C. Pierce, *Types and Programming Languages*, Cambridge, MA, MIT Press, 2002.  
 
+```
+# run code in ghci 
+stack exec -- ghci 
+:l ../<project>/Main.hs
+:set args ../examples/<test file>.f 
+main 
+```
 
-[original examples codes, written in OCaml](http://www.cis.upenn.edu/~bcpierce/tapl/checkers/)
+```
+# compile & run
+stack build 
+stack exec -- <project> <test file>.f
+```
 
 
-## List 
-* *arith*:    Untyped calculus of booleans and numbers **NB** - Ch. 3 to 4
-* *untyped*:    Untyped lambda calculus **λ** - Ch. 5 to 7
-* ~~*fulluntyped*:    Untyped lambda calculus with booleans and numbers **λNB** - Ch. 5 to 7~~
-* *tyarith*:    Typed calculus of **NB**- Ch. 8 
-* *simplebool*:    Simply typed lambda calculus **λ<sub>→</sub>** with **B** - Ch. 10
-* *fullsimple*:    **λ<sub>→</sub>** with **NB** and some extensions - Ch. 9 to 11
+
+[Original examples codes, OCaml version](http://www.cis.upenn.edu/~bcpierce/tapl/checkers/)]
+
+## Projects
+
+*[arith](arith)* (Ch. 3 - 4) - Untyped Naturals and Booleans (**NB**) 
+*[untyped](untyped)* (Ch. 5 - 7) - Untyped Lambda-Calculus (**λ**) 
+~~*fulluntyped* (Ch. 5 - 7) - **λ** + **NB**~~
+*[tyarith](tyarith)* (Ch. 8) - Typed Arithmetic Expressions (**NB**) 
+*[simplebool](simplebool)* (Ch. 10) - Simply Typed Lambda Calculus (**λ<sub>→</sub>**) with Booleans 
+*[fullsimple](fullsimple)* (Ch. 9 - 11) - Extended **λ<sub>→</sub>** 
+> natural, boolean, float, string, unit, 
+> let bindings, ~~ascription~~, ~~fixpoint~~,
+> ~~record, variants~~
+
+
