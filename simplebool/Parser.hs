@@ -1,4 +1,4 @@
-module SyntaxParser
+module Parser
   ( term
   , program
   )

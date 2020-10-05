@@ -1,8 +1,9 @@
 module Main where
 
-import           Eval
 import           Syntax
-import           SyntaxParser
+import           Parser
+import           Typechecker
+import           Eval
 
 import           Control.Monad
 import           Control.Monad.IO.Class         ( liftIO )
@@ -23,8 +24,8 @@ processCommand cmd = do
       let resultOp = return $! showTerm ctx $ eval ctx term
       result <- fromMaybe "[infinite loop]" <$> timeout 5000 resultOp
       putStrLn $ "   => " ++ result
-      putStrLn $ "    : " ++ either angular show (typeof ctx term) where 
-        angular s = "[" ++ s ++ "]"
+      putStrLn $ "    : " ++ either angular show (typeof ctx term)
+      where angular s = "[" ++ s ++ "]"
     CmdBind s ty -> do
       let ctx' = (s, VarBind ty) : ctx
       put ctx'

@@ -3,7 +3,7 @@ module Main where
 import           Eval
 import qualified Eval.Bigstep                  as BS
 import           Syntax
-import           SyntaxParser
+import           Parser
 import           Control.Monad
 import           Data.Either
 import           System.Environment

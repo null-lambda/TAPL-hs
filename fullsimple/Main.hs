@@ -2,7 +2,8 @@ module Main where
 
 import           Eval
 import           Syntax
-import           SyntaxParser
+import           Parser
+import           Typechecker
 
 import           Control.Monad
 import           Control.Monad.IO.Class         ( liftIO )
@@ -20,19 +21,21 @@ processCommand cmd = do
   ctx <- get
   case cmd of
     CmdEval term -> liftIO $ do
-      putStrLn $ "Eval: " ++ showTerm ctx term
+      putStrLn $ "> Eval : " ++ showTerm ctx term
       let resultOp = return $! showTerm ctx $ eval ctx term
-      result <- fromMaybe "[infinite loop]" <$> timeout 5000 resultOp
+      result <- fromMaybe "[timeout]" <$> timeout 3000000 resultOp
       putStrLn $ "   => " ++ result
       putStrLn $ "    : " ++ either angular (showType ctx) (typeof ctx term)
       where angular s = "[" ++ s ++ "]"
     CmdBind s b -> case checkBinding ctx b of
       Right b' -> do
-        modify ((s, b') :)
         ctx <- get
-        -- liftIO . putStrLn $ "Bind : " ++ (s ++ showBinding (ctx b')
-        liftIO . putStrLn $ "Context : " ++ showContext ctx
-      Left err -> liftIO $ putStrLn err
+        let ctx' = (s, b') : ctx
+        put ctx'
+        -- liftIO . putStrLn $ "Context : " ++ showContext ctx'
+
+        liftIO . putStrLn $ "> Bind : " ++ (s ++ showBinding ctx b')
+      Left err -> liftIO . putStrLn $ "> *Err : " ++ err
 
 processProgram :: String -> IO ()
 processProgram s =

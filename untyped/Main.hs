@@ -7,7 +7,7 @@ import qualified Eval.Bigstep.CallByName
 import qualified Eval.Normal
 import qualified Eval.Bigstep.Normal
 import           Syntax
-import           SyntaxParser
+import           Parser
 
 import           Control.Monad
 import           Control.Monad.IO.Class         ( liftIO )

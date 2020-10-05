@@ -1,8 +1,10 @@
 module Main where
 
-import           Eval
 import           Syntax
-import           SyntaxParser
+import           Eval
+import           Typechecker
+import           Parser
+
 import           Control.Monad
 import           Data.Either
 import           System.Environment

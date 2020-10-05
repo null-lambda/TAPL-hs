@@ -1,4 +1,4 @@
-/* Examples for testing */
+/* test 1. primitives */
 
 "Hello, World!";
 

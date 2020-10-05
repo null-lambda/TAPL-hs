@@ -1,16 +1,40 @@
+
 # TAPL-hs
-Sample codes of TAPL, rewritten in haskell for personal study.
+Example codes of TAPL, rewritten in haskell for personal study.
 
-[TAPL book](http://www.cis.upenn.edu/~bcpierce/tapl/main.html) \- B. C. Pierce, *Types and Programming Languages*, Cambridge, MA, MIT Press, 2002.  
+[TAPL book](http://www.cis.upenn.edu/~bcpierce/tapl/main.html) \- B. C. Pierce, *Types and Programming Languages*, Cambridge, MA, MIT Press, 2002. 
+
+[Original codes (OCaml version)](http://www.cis.upenn.edu/~bcpierce/tapl/checkers/)
 
 
-[original examples codes, written in OCaml](http://www.cis.upenn.edu/~bcpierce/tapl/checkers/)
+## Projects
+
+* *[arith](arith)* (Ch. 3 - 4) - Arithmetic Expressions (**NB**)  
+* *[untyped](untyped)* (Ch. 5 - 7) - Lambda-Calculus (**λ**)   
+* ~~*fulluntyped* (Ch. 5 - 7) - **λ** + **NB**~~  
+* *[tyarith](tyarith)* (Ch. 8) - Typed Arithmetic Expression (**NB**)   
+* *[simplebool](simplebool)* (Ch. 10) - Simply Typed Lambda Calculus (**λ<sub>→</sub>**) with Booleans     
+* *[fullsimple](fullsimple)* (Ch. 9 - 11) - Extended **λ<sub>→</sub>**   
+natural, boolean, float, string, unit,   
+term and type variable, abbreviation, 
+let, fix, ~~ascription~~, record, variant~~
 
 
-## List 
-* *arith*:    Untyped calculus of booleans and numbers **NB** - Ch. 3 to 4
-* *untyped*:    Untyped lambda calculus **λ** - Ch. 5 to 7
-* ~~*fulluntyped*:    Untyped lambda calculus with booleans and numbers **λNB** - Ch. 5 to 7~~
-* *tyarith*:    Typed calculus of **NB**- Ch. 8 
-* *simplebool*:    Simply typed lambda calculus **λ<sub>→</sub>** with **B** - Ch. 10
-* *fullsimple*:    **λ<sub>→</sub>** with **NB** and some extensions - Ch. 9 to 11
+
+## Running 
+* install stack or haskell platform 
+
+* run in ghci interpreter
+```bash
+$ cd <project-dir>
+$ ghci    # stack exec -- ghci 
+Prelude> :l Main.hs
+Main> :set args <testfile>  # <testfile> is located in examples/..
+Main> main 
+```
+
+* compiled version
+```bash
+$ stack build 
+$ stack exec -- <project> <testfile>
+```
