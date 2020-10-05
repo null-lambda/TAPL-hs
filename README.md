@@ -14,10 +14,10 @@ Example codes of TAPL, rewritten in haskell for personal study.
 * ~~*fulluntyped* (Ch. 5 - 7) - **λ** + **NB**~~  
 * *[tyarith](tyarith)* (Ch. 8) - Typed Arithmetic Expressions (**NB**)   
 * *[simplebool](simplebool)* (Ch. 10) - Simply Typed Lambda Calculus (**λ<sub>→</sub>**) with Booleans     
-* *[fullsimple](fullsimple)* (Ch. 9 - 11) - Extensions **λ<sub>→</sub>**   
-natural, boolean, float, string, unit,   
-type variables, abbreviated terms and types,
-let-in, fix, ~~ascription~~, record, variants, case-of
+* *[fullsimple](fullsimple)* (Ch. 9 - 11) - Extensions of **λ<sub>→</sub>**   
+Natural, Boolean, Float, String, Unit,   
+Type Variables, Abbreviated Terms,
+Let-In, Fixpoint Combinator, ~~ascription~~, Record, Variants, Case-of
 
 
 
