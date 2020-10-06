@@ -14,7 +14,10 @@ import           Data.Void
 import           Data.Bifunctor
 import           Data.Functor
 import           Data.Functor.Identity
+import           Data.List
 import           Data.Maybe
+import qualified Data.HashSet                  as Set
+import           Data.HashSet                   ( Set )
 import           Text.Megaparsec         hiding ( State )
 import           Text.Megaparsec.Char
 import qualified Text.Megaparsec.Char.Lexer    as L
@@ -24,7 +27,7 @@ import           Syntax
 
 type Parser a = StateT Context (ParsecT Void String Identity) a
 
-reservedKeywords =
+reservedKeywords = Set.fromList
   [ "if"
   , "then"
   , "else"
@@ -46,7 +49,7 @@ reservedKeywords =
   , "case"
   , "of"
   ]
-isReservedName = (`elem` reservedKeywords)
+isReservedName = (`Set.member` reservedKeywords)
 
 spaces :: Parser ()
 lexeme :: Parser a -> Parser a
@@ -63,9 +66,7 @@ reserved s = lexeme $ try $ do
   notFollowedBy letterChar <?> "end of" ++ show s
 notReserved p = lexeme $ try $ do
   s <- p
-  if isReservedName s
-    then fail $ "reserved word " ++ show s
-    else return s
+  if isReservedName s then fail $ "reserved word " ++ show s else return s
 identifier = notReserved $ (:) <$> letterChar <*> many alphaNumChar
 varName = notReserved $ (:) <$> lowerChar <*> many alphaNumChar
 typeName = notReserved $ (:) <$> upperChar <*> many alphaNumChar
@@ -75,13 +76,10 @@ stringLiteral = char '"' *> manyTill L.charLiteral (char '"')
 parens = between (symbol "(") (symbol ")")
 angles = between (symbol "<") (symbol ">")
 curly = between (symbol "{") (symbol "}")
-underscore = symbol "_"
 colon = symbol ":"
 semicolon = symbol ";"
 comma = symbol ","
 dot = symbol "."
-equals = symbol "="
-
 
 -- left recursion solver, which removes infinite loop in parsing
 {- 
@@ -102,6 +100,12 @@ leftRecursion append base = do
 
 rightRecursion :: (Parser a -> Parser a) -> Parser a -> Parser a
 rightRecursion prepend base = e where e = try (prepend e) <|> base
+
+suffix :: Parser (a -> a) -> Parser a -> Parser a
+suffix op = leftRecursion append where
+  append x = do
+    f <- op
+    return $ x & f
 
 infixN :: Parser (a -> a -> a) -> Parser a -> Parser a
 infixN op p = do
@@ -140,12 +144,13 @@ tyBase = choice $ map
   , ("Float" , TyFloat)
   ]
 tyUnitAbb = symbol "()" >> return TyUnit
-tyVar = (<?> "type variable") $ do
+tyVar = label "type variable" $ do
   x   <- typeName
   ctx <- get
   i   <- case nameToIndex ctx x of
     Just i  -> return i
-    Nothing -> fail $ "unbound type variable name " ++ show x
+    Nothing -> fail $ "unbound variable name " ++ show x ++ " in " ++ sctx
+      where sctx = "{" ++ intercalate ", " (map fst ctx) ++ "}"
   let n = length ctx
   return (TyVar i n)
 tyArrow = infixR (symbol "->" >> return TyArrow)
@@ -170,53 +175,74 @@ tyVariant baseType = label "variant type" $ do
     return (l, t1)
   return $ TyVariant rs
 
-tyAtom =
-  choice [tyUnitAbb, parens ty, tyRecord ty, tyVariant ty, tyBase, tyVar]
-ty = tyArrow tyAtom <?> "type"
+tyAtom = label "atomic type"
+  $ choice [tyUnitAbb, parens ty, tyRecord ty, tyVariant ty, tyBase, tyVar]
+ty = label "type" $ tyArrow tyAtom
 
 -- term 
 
-tmVar = (<?> "variable") $ try $ do
+tmVar = label "variable" $ try $ do
   x   <- varName
   ctx <- get
   i   <- case nameToIndex ctx x of
-    Just i  -> return i
-    Nothing -> fail $ "unbound variable name " ++ show x
+    Just i -> return i
+    Nothing ->
+      fail $ "unbound variable name " ++ show x ++ " in context " ++ sctx
+      where sctx = "{" ++ intercalate ", " (map fst ctx) ++ "}"
   let n = length ctx
   return (TmVar i n)
-tmAbs baseTerm = do
-  choice [reserved "lambda", void $ symbol "\\"]
+tmAbs baseTerm = label "lambda" $ do
+  choice [reserved "lambda", void $ symbol "\x03bb", void $ symbol "\\"]
   ctx <- get
   vs  <- (<?> "parameter list") $ some $ do
-    x1  <- varName
-    ty1 <- colon >> ty
+    x1 <- varName <|> symbol "_"
+    symbol ":"
+    ty1 <- ty
     modify ((x1, NameBind) :)
     return (x1, ty1)
-  t1 <- dot >> baseTerm
+  symbol "."
+  t1 <- baseTerm
   put ctx
   return $ foldr (uncurry TmAbs) t1 vs
 tmApp = infixL (return TmApp)
 
-tmLet baseTerm = do
-  x   <- reserved "let" >> varName
+tmLet baseTerm = label "let" $ do
+  reserved "let"
+  x <- varName
+  symbol "="
+  t1 <- baseTerm
+  reserved "in"
   ctx <- get
-  t1  <- equals >> baseTerm
   modify ((x, NameBind) :)
-  t2 <- reserved "in" >> baseTerm
+  t2 <- baseTerm
   put ctx
   return $ TmLet x t1 t2
+tmLetrec baseTerm = label "letrec" $ do
+  reserved "letrec"
+  x   <- varName
+  symbol ":"
+  tyX <- ty
+  symbol "="
+  ctx <- get
+  modify ((x, NameBind) :)
+  t1 <- baseTerm
+  reserved "in"
+  t2 <- baseTerm
+  put ctx
+  return $ TmLet x (TmFix (TmAbs x tyX t1)) t2
 
 tmRecord baseTerm = label "record" $ do
   rs <- curly $ flip sepBy1 comma $ do
-    l  <- optional $ try (recordLabel <* equals)
+    l  <- optional $ try (recordLabel <* symbol "=")
     t1 <- baseTerm
     return (l, t1)
   let defaultLabel = map show [1 ..]
   let rs' = zipWith (\i (ml, t1) -> (fromMaybe i ml, t1)) defaultLabel rs
   return $ TmRecord rs'
-tmProj = leftRecursion $ \t1 -> label "projection" $ do
+tmProj = suffix $ label "projection" $ do
   symbol "."
-  TmProj t1 <$> recordLabel
+  l <- recordLabel
+  return (\t1 -> TmProj t1 l)
 tmTag baseTerm = label " tag" $ do
   symbol "<"
   l <- variantLabel
@@ -233,7 +259,7 @@ tmCase baseTerm = label "case" $ do
     symbol "<"
     ln <- variantLabel
     symbol "="
-    xn <- varName
+    xn <- varName <|> symbol "_"
     symbol ">"
     ctx <- get
     modify ((xn, NameBind) :)
@@ -243,18 +269,26 @@ tmCase baseTerm = label "case" $ do
     return (ln, (xn, tn))
   return $ TmCase t cases
 
+tmAscrib = suffix $ label "ascription" $ do
+  reserved "as"
+  tyAsc <- ty
+  return (\t1 -> TmAscrib t1 tyAsc)
 
-tmIf baseTerm =
-  TmIf
-    <$> (reserved "if" >> baseTerm)
-    <*> (reserved "then" >> baseTerm)
-    <*> (reserved "else" >> baseTerm)
+tmIf baseTerm = label "if" $ do
+  reserved "if"
+  t1 <- baseTerm
+  reserved "then"
+  t2 <- baseTerm
+  reserved "else"
+  t3 <- baseTerm
+  return $ TmIf t1 t2 t3
+
 tmNat = f <$> natural where
   f 0 = TmZero
   f n = TmSucc $ f (n - 1)
 tmFloat = TmFloat <$> try float
 tmString = TmString <$> try stringLiteral
-tmLiteral = (<?> "literal") $ choice $ r ++ [tmString, tmFloat, tmNat] where
+tmLiteral = label "literal" $ choice $ r ++ [tmString, tmFloat, tmNat] where
   r = map (\(name, t) -> reserved name >> return t)
           [("unit", TmUnit), ("true", TmTrue), ("false", TmFalse)]
 tmUnaryFunc baseTerm = choice $ map
@@ -265,23 +299,37 @@ tmBinaryFunc baseTerm = choice $ map
   [("timesfloat", TmTimesFloat)]
 tmUnitAbb = symbol "()" >> return TmUnit
 
+termSequence = leftRecursion append term where
+  append t1 = do
+    symbol ";"
+    ctx <- get
+    modify (("_", NameBind) :)
+    t2 <- term
+    put ctx
+    return (TmApp (TmAbs "_" TyUnit t2) t1)
+
+-- grammar
+
 expAtom = choice
-  [tmUnitAbb, parens term, tmRecord term, tmTag term, tmVar, tmLiteral, tmVar]
-expAsc = choice [expAtom]
-expPath = choice [tmProj expAsc, expAsc]
-expApp = choice [tmUnaryFunc expPath, tmBinaryFunc expPath, tmApp expPath]
-exp10 = choice [tmAbs term, tmIf term, tmLet term, tmCase term, expApp]
+  [tmUnitAbb, parens termSequence, tmRecord term, tmTag term, tmVar, tmLiteral]
+expPath = (choice . map ($ expAtom)) [tmProj, id]
+expAsc = (choice . map ($ expPath)) [tmAscrib, id]
+expApp = (choice . map ($ expAsc)) [tmUnaryFunc, tmBinaryFunc, tmApp, id]
+exp10 =
+  (choice . map ($ term)) [tmAbs, tmIf, tmLet, tmLetrec, tmCase] <|> expApp
 exp0 = exp10
 term = exp0 <?> "term"
+
+-- command & bindings
 
 cmdEval = CmdEval <$> term
 
 tmBind = varBind <|> tmAbbBind where
   varBind   = colon >> VarBind <$> ty
-  tmAbbBind = equals >> TmAbbBind <$> term <*> optional (colon >> ty)
+  tmAbbBind = symbol "=" >> TmAbbBind <$> term <*> optional (colon >> ty)
 tyBind = tyAbbBind <|> tyVarBind where
   tyVarBind = return TyVarBind
-  tyAbbBind = equals >> TyAbbBind <$> ty
+  tyAbbBind = symbol "=" >> TyAbbBind <$> ty
 cmdBind = do
   x <- identifier
   b <- if isLower $ head x then tmBind else tyBind

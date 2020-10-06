@@ -4,3 +4,4 @@ hie.yaml
 stack.yaml.lock
 .*.yaml
 *.cabal
+stack build

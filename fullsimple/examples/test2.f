@@ -7,7 +7,7 @@ lambda x:<a:Bool,b:Bool>. x;
 {x=true, y=false}.x;
 {true, false};
 {true, false}.1;
-{{"00","11"},{"22","33"}}.2.1;
+({{"00","11"},{"22","33"}}.2 as {String, String}).1;
 
 PhysicalAddr = {firstlast:String, addr:String};
 VirtualAddr= {name:String, email:String};

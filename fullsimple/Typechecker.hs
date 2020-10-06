@@ -71,7 +71,8 @@ typeof ctx t = case t of
     ty2 <- typeof ctx t2
     case evalType ctx ty1 of
       TyArrow ty11 ty12 | typeEquals ctx ty11 ty2 -> return ty12
-      TyArrow ty11 ty12 -> throwError "parameter type mismatch"
+      TyArrow ty11 ty12 ->
+        throwError $ "parameter type mismatch on \"" ++ showTerm ctx t ++ "\""
       _ -> throwError $ "expected arrow type on \"" ++ showTerm ctx t1 ++ "\""
   TmLet s t1 t2 -> do
     ty1 <- typeof ctx t1
@@ -111,11 +112,16 @@ typeof ctx t = case t of
         let tyTag1 = head caseTypes
         forM_ (tail caseTypes) $ \tyTagN -> unless
           (typeEquals ctx tyTag1 tyTagN)
-          (throwError "fields of case statemenet do not have the same type")
+          (throwError "fields of case statement do not have the same type")
         return tyTag1
       _ ->
         throwError $ "expected variant type on \"" ++ showType ctx ty0 ++ "\""
-  TmUnit        -> return TyUnit
+  TmUnit            -> return TyUnit
+  TmAscrib t1 tyAsc -> do
+    ty1 <- typeof ctx t1
+    unless (typeEquals ctx ty1 tyAsc)
+           (throwError "body of as-term does not have the expected type")
+    return tyAsc
   TmTrue        -> return TyBool
   TmFalse       -> return TyBool
   TmIf t1 t2 t3 -> do

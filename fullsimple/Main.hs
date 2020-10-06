@@ -11,6 +11,7 @@ import           Control.Monad.Trans.State
 import           Data.List
 import           Data.Maybe                     ( fromMaybe )
 import           System.Environment
+import System.IO
 import           System.IO.Error                ( tryIOError )
 import           System.Timeout                 ( timeout )
 import           Text.Megaparsec
@@ -58,7 +59,10 @@ main = do
   progName <- getProgName
   case args of
     [sourceFile] -> do
-      result <- tryIOError (readFile sourceFile)
+      result <- tryIOError $ do
+        inputHandle <- openFile sourceFile ReadMode
+        hSetEncoding inputHandle utf8
+        hGetContents inputHandle
       case result of
         Left  err -> print err
         Right s   -> processProgram s

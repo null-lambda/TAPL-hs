@@ -20,24 +20,37 @@ extendTable = \t:Table m:Nat v:Nat n:Nat.
     : Table -> Nat -> Nat -> Table;
 
 emptyTable 10;
-ta = extendTable emptyTable 10 5; 
+ta = extendTable emptyTable 10 5;
 ta 10; 
 
-fib =
-    let plus = fix (
-    \f:Nat->Nat->Nat m:Nat n:Nat.
-        if iszero m
-        then n 
-        else f (pred m) (succ n)
-    ) in
-    let prd2 = \n:Nat. pred (pred n) in
-    let opt = \n:OptionalNat. 
-        case n of <some=m> => m | <none=l> => 0 in 
-    fix (\t:Table n:Nat. 
+letrec fib:Table = (
+    letrec plus : Nat->Nat->Nat = 
+        λ m:Nat n:Nat.
+            if iszero m
+            then n 
+            else plus (pred m) (succ n) 
+        in
+    let prd2 = λ n:Nat. pred (pred n) in
+    let opt = λ n:OptionalNat. 
+        case n of <some=m> => m | <none=_> => 0 in 
+    λ n:Nat. 
         if iszero (pred n) then <some=1> as OptionalNat 
-        else <some=plus (opt (t (pred n))) (opt (t (prd2 n)))> as OptionalNat
+        else <some=plus (opt (fib (pred n))) (opt (fib (prd2 n)))> as OptionalNat
+    ) in
+    let f = λn:Nat. {n=n, fibn=fib n} in 
+    {f 2, f 8, f 10};
+
+// exercise 11.2.1
+u=(); U=(); UU=()-> ();
+t = fix (\t:Nat->U. \n:Nat. 
+    if iszero n 
+        then (\x:U. x) u
+        else (\f:UU. f(f(u))) (\x:U. t(pred n))
+
     );
-fib 10;
+
+t 2; 
+(t 15; t 2);
 
 /*
 NatList = <nil:Unit, cons:{Nat,NatList}>;

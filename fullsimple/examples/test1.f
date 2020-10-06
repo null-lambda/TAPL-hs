@@ -10,7 +10,8 @@ timesfloat 2.0 3.14159;
 A;
 lambda x:A. 0.151523;
 
-an:Nat;
+an : A;
+an as A;
 bn = lambda x:Nat. iszero x;
 bn an ;
 bn 10;
@@ -20,9 +21,9 @@ T = Nat->Nat;
 g : T ; 
 (\z:Nat -> Nat . z 3) g;
 
-lambda f:T. lambda x:Nat. f (f x);
+(lambda f:T. lambda x:Nat. f (f x)) as T -> Nat -> Nat;
 
-a: Nat;
+a : Nat;
 let f= (\b:Nat->Nat .(\a:Nat->Nat. b)) in f (\c:Nat. a);
 
 let a = 10 
