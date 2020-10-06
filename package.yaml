@@ -4,9 +4,11 @@ github: "null-lambda/TAPL-hs"
 
 dependencies:
   - base >= 4.7 && < 5
+  - parsec
   - megaparsec
   - mtl
   - transformers
+  - hashmap
 
 ghc-options:
   - -threaded
@@ -17,26 +19,18 @@ executables:
   arith:
     main: Main.hs
     source-dirs: "arith"
-    dependencies: 
-    - parsec
 
   untyped:
     main: Main.hs
     source-dirs: "untyped"
-    dependencies:
-    - parsec
 
   tyarith:
     main: Main.hs
     source-dirs: "tyarith"
-    dependencies: 
-    - parsec 
 
   simplebool:
     main: Main.hs
     source-dirs: "simplebool"
-    dependencies: 
-    - parsec
 
   fullsimple:
     main: Main.hs
