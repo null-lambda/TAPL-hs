@@ -1,5 +1,3 @@
-/* test 3. fix operators */
-
 plus = fix (
   \f:Nat->Nat->Nat m:Nat n:Nat.
     if iszero m
@@ -27,4 +25,3 @@ plus 0 12;
 
 times 5 10;
 factorial 5;
-

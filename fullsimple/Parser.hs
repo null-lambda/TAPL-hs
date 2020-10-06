@@ -2,6 +2,7 @@ module Parser
   ( term
   , cmd
   , program
+  , runParser
   )
 where
 
@@ -18,7 +19,10 @@ import           Data.List
 import           Data.Maybe
 import qualified Data.HashSet                  as Set
 import           Data.HashSet                   ( Set )
-import           Text.Megaparsec         hiding ( State )
+import           Text.Megaparsec         hiding ( State
+                                                , runParser
+                                                )
+import qualified Text.Megaparsec               as P
 import           Text.Megaparsec.Char
 import qualified Text.Megaparsec.Char.Lexer    as L
 import           Text.Megaparsec.Debug
@@ -81,13 +85,6 @@ semicolon = symbol ";"
 comma = symbol ","
 dot = symbol "."
 
--- left recursion solver, which removes infinite loop in parsing
-{- 
-  e := e dot P | base 
-  ---------------------------  
-  e := base e' 
-  e' := dot P e' | empty
--}
 leftRecursion :: (a -> Parser a) -> Parser a -> Parser a
 leftRecursion append base = do
   x <- base
@@ -97,9 +94,6 @@ leftRecursion append base = do
         r <- append x
         rest r
       <|> return x
-
-rightRecursion :: (Parser a -> Parser a) -> Parser a -> Parser a
-rightRecursion prepend base = e where e = try (prepend e) <|> base
 
 suffix :: Parser (a -> a) -> Parser a -> Parser a
 suffix op = leftRecursion append where
@@ -120,7 +114,6 @@ infixL op p = leftRecursion append p where
     f <- op
     y <- p
     return $ x `f` y
-
 
 -- efficient version of rightRecursion (no 'try' function backtracking)
 infixR :: Parser (a -> a -> a) -> Parser a -> Parser a
@@ -219,7 +212,7 @@ tmLet baseTerm = label "let" $ do
   return $ TmLet x t1 t2
 tmLetrec baseTerm = label "letrec" $ do
   reserved "letrec"
-  x   <- varName
+  x <- varName
   symbol ":"
   tyX <- ty
   symbol "="
@@ -239,11 +232,10 @@ tmRecord baseTerm = label "record" $ do
   let defaultLabel = map show [1 ..]
   let rs' = zipWith (\i (ml, t1) -> (fromMaybe i ml, t1)) defaultLabel rs
   return $ TmRecord rs'
-tmProj = suffix $ label "projection" $ do
+tmProj = leftRecursion $ \t1 -> do
   symbol "."
-  l <- recordLabel
-  return (\t1 -> TmProj t1 l)
-tmTag baseTerm = label " tag" $ do
+  TmProj t1 <$> recordLabel
+tmTag baseTerm = label "tag" $ do
   symbol "<"
   l <- variantLabel
   symbol "="
@@ -269,10 +261,9 @@ tmCase baseTerm = label "case" $ do
     return (ln, (xn, tn))
   return $ TmCase t cases
 
-tmAscrib = suffix $ label "ascription" $ do
+tmAscrib = leftRecursion $ \t1 -> do
   reserved "as"
-  tyAsc <- ty
-  return (\t1 -> TmAscrib t1 tyAsc)
+  TmAscrib t1 <$> ty
 
 tmIf baseTerm = label "if" $ do
   reserved "if"
@@ -308,7 +299,7 @@ termSequence = leftRecursion append term where
     put ctx
     return (TmApp (TmAbs "_" TyUnit t2) t1)
 
--- grammar
+-- grammar (overall precedence)
 
 expAtom = choice
   [tmUnitAbb, parens termSequence, tmRecord term, tmTag term, tmVar, tmLiteral]
@@ -342,3 +333,11 @@ cmd = cmdEval <|> cmdBind
 program :: Parser [Command]
 program = spaces *> endBy1 cmd semicolon <* eof
 
+-- running 
+
+runParser
+  :: Parser a -> Context -> String -> String -> Either String (a, Context)
+runParser p state sourceName input =
+  let p'     = runStateT p state
+      output = P.runParser p' sourceName input
+  in  first errorBundlePretty output

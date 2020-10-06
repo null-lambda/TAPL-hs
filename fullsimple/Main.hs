@@ -14,7 +14,6 @@ import           System.Environment
 import System.IO
 import           System.IO.Error                ( tryIOError )
 import           System.Timeout                 ( timeout )
-import           Text.Megaparsec
 import           Text.Printf
 
 processCommand :: Command -> StateT Context IO ()
@@ -39,11 +38,9 @@ processCommand cmd = do
       Left err -> liftIO . putStrLn $ "> *Err : " ++ err
 
 processProgram :: String -> IO ()
-processProgram s =
-  let baseCtx = []
-      p       = runStateT program baseCtx
-  in  case runParser p "main" s of
-        Right (cmds, st) -> loop cmds baseCtx         where
+processProgram input =
+  case runParser program [] "main" input of
+        Right (cmds, _) -> loop cmds []         where
           loop :: [Command] -> Context -> IO ()
           loop (c : cs) ctx = do
             ctx' <- execStateT (processCommand c) ctx
@@ -51,7 +48,7 @@ processProgram s =
           loop [] _ = return ()
         Left err -> do
           putStrLn "parse error"
-          putStrLn $ errorBundlePretty err
+          putStrLn err
 
 main :: IO ()
 main = do
@@ -64,8 +61,8 @@ main = do
         hSetEncoding inputHandle utf8
         hGetContents inputHandle
       case result of
-        Left  err -> print err
         Right s   -> processProgram s
+        Left  err -> print err
     _ -> printf "Usage: %s examples\\test.f\n" progName
 
 
