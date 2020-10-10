@@ -7,6 +7,7 @@ dependencies:
   - parsec
   - megaparsec
   - hashmap
+  - transformers
   - mtl
 
 ghc-options:
@@ -30,9 +31,13 @@ executables:
   simplebool:
     main: Main.hs
     source-dirs: "simplebool"
-    dependencies: 
-      - transformers
 
   fullsimple:
     main: Main.hs
     source-dirs: "fullsimple"
+      
+  fullref:
+    main: Main.hs
+    source-dirs: "fullref"
+    dependencies: 
+      - containers

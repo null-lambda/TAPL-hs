@@ -9,13 +9,13 @@ Example codes of TAPL, rewritten in haskell for personal study.
 
 ## Projects
 
-* *[arith](arith)* (Ch. 3 - 4) - Arithmetic Expressions (**NB**)  
+* *[arith](arith)* (Ch. 3, 4) - Arithmetic Expressions (**NB**)  
 
 ```
     t   = true | false | if t then t else t     (booleans)
         | zero | succ t | pred t | iszero t     (naturals)
 ```
-* *[untyped](untyped)* (Ch. 5 - 7) - Lambda-Calculus (**λ**)   
+* *[untyped](untyped)* (Ch. 5, 6, 7) - Lambda-Calculus (**λ**)   
 ```
     t   = x             (variables) 
         | λ x . t       (abstraction) 
@@ -29,12 +29,12 @@ Example codes of TAPL, rewritten in haskell for personal study.
 * *[simplebool](simplebool)* (Ch. 10) - Simply Typed Lambda Calculus (**λ<sub>→</sub>**) with Booleans     
 ```
     t   = (...)        
-        | λ x:T. t      (typed abstraction)
+        | λ x:T. t          (typed abstraction)
 
     T   = (...)         
-        | T -> T        (arrow)
+        | T -> T            (arrow)
 ```
-* *[fullsimple](fullsimple)* (Ch. 9 - 11) - Extensions of **λ<sub>→</sub>**  
+* *[fullsimple](fullsimple)* (Ch. 9, 10, 11) - Extensions of **λ<sub>→</sub>**  
 ```
     t   = A | (...)                                     (literal, variables, operations)
         | ()                                            (unit)
@@ -51,7 +51,17 @@ Example codes of TAPL, rewritten in haskell for personal study.
         | {T1, ...} | {l1:T1, ...}                      (product type)
         | <l1:T1, ...>                                  (sum type)
 ``` 
+* *[fullref](fullref)* (Ch. 13, 18) - fullsimple + References with heap memory (store)
+```
+    t   = (...)
+        | ref t             (reference creation)
+        | !t                (dereference)
+        | t := t            (assignment)
+        | l                 (store location)
 
+    T   = (...)
+        | Ref T 
+```
 
 ## Running 
 * Install stack or haskell platform 
