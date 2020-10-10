@@ -217,7 +217,6 @@ showType :: Context -> Ty -> String
   11 Application 
 -}
 showType = sp 0 where
-  dInf = 10000
   parenIf b s = if b then "(" ++ s ++ ")" else s
   sp d ctx t =
     let sp0 d t = sp d ctx t
@@ -231,11 +230,11 @@ showType = sp 0 where
           ["{" ++ intercalate ", " (map showRec fields) ++ "}"]
          where
           showRec (l, ty) = case readMaybe l :: Maybe Int of
-            Just i | i >= 1 -> sp0 dInf ty
-            _               -> concat [l, ":", sp0 dInf ty]
+            Just i | i >= 1 -> sp0 0 ty
+            _               -> concat [l, ":", sp0 0 ty]
         TyVariant fields -> concat
           ["<" ++ intercalate ", " (map showRec fields) ++ ">"]
-          where showRec (l, ty) = l ++ ":" ++ sp0 dInf ty
+          where showRec (l, ty) = l ++ ":" ++ sp0 0 ty
         TyUnit   -> "()"
         TyBool   -> "Bool"
         TyNat    -> "Nat"
@@ -259,7 +258,6 @@ showTerm = sp 0 where
     let
       sp0 d t = sp d ctx t
       parenIf b s = if b then "(" ++ s ++ ")" else s
-      dInf = 10000
       showAsNum t acc = case t of
         TmZero    -> Just $ show acc
         TmSucc t1 -> showAsNum t1 (acc + 1)
@@ -282,15 +280,15 @@ showTerm = sp 0 where
               s2'        = sp 10 ctx' t2
           in  parenIf (d > 10) $ concat ["let ", x', " = ", s1, " in ", s2']
         TmRecord fields -> concat
-          ["{", intercalate "," (map showRec fields), "}"]
+          ["{", intercalate ", " (map showRec fields), "}"]
          where
           showRec (l, t) = case readMaybe l :: Maybe Int of
-            Just i | i > 0 -> sp0 dInf t
-            _              -> concat [l, "=", sp0 dInf t]
+            Just i | i > 0 -> sp0 0 t
+            _              -> concat [l, "=", sp0 0 t]
         TmProj t1 l ->
           let st1 = sp0 21 t1 in parenIf (d > 21) $ concat [st1, ".", l]
         TmTag l t1 tyT ->
-          let st1  = sp0 dInf t1
+          let st1  = sp0 0 t1
               styT = showType ctx tyT
           in  concat ["<", l, "=", st1, "> as ", styT]
         TmCase t0 cases ->
