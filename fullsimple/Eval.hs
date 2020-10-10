@@ -1,13 +1,6 @@
 module Eval where
 
-import           Control.Applicative
 import           Control.Monad
-import           Control.Monad.Except
-import           Data.Bifunctor
-import           Data.Either
-import           Data.Maybe
-import           Data.List
-import           Debug.Trace
 
 import           Syntax
 import           Typechecker
@@ -20,16 +13,16 @@ isNatural t = case t of
   TmSucc t1 -> isNatural t1
   _         -> False
 
-isVal :: Context -> Term -> Bool
-isVal ctx t = case t of
+isVal :: Term -> Bool
+isVal t = case t of
   TmAbs{}         -> True
-  TmRecord fields -> all (isVal ctx . snd) fields
-  TmTag l t1 ty -> isVal ctx t1
+  TmRecord fields -> all (isVal . snd) fields
+  TmTag _ t1 _    -> isVal t1
   TmUnit          -> True
   TmTrue          -> True
   TmFalse         -> True
   TmString _      -> True
-  TmFloat _ -> True 
+  TmFloat  _      -> True
   t | isNatural t -> True
   _               -> False
 
@@ -37,24 +30,24 @@ isVal ctx t = case t of
 
 eval1 :: Context -> Term -> Maybe Term
 eval1 ctx t = case t of
-  TmVar i n -> case indexToBinding ctx i of
+  TmVar i _ -> case indexToBinding ctx i of
     TmAbbBind t1 _ -> return t1
     _              -> Nothing
-  TmApp (TmAbs s ty t12) v2 | isVal ctx v2 -> return $ termSubstTop v2 t12
-  TmApp v1 t2 | isVal ctx v1               -> do
+  TmApp (TmAbs _ _ t12) v2 | isVal v2 -> return $ termSubstTop v2 t12
+  TmApp v1 t2 | isVal v1              -> do
     t2' <- eval1 ctx t2
     return $ TmApp v1 t2'
   TmApp t1 t2 -> do
     t1' <- eval1 ctx t1
     return $ TmApp t1' t2
-  TmLet s v1 t2 | isVal ctx v1 -> return $ termSubstTop v1 t2
-  TmLet s t1 t2                -> do
+  TmLet _ v1 t2 | isVal v1 -> return $ termSubstTop v1 t2
+  TmLet s t1 t2            -> do
     t1' <- eval1 ctx t1
     return $ TmLet s t1' t2
   TmRecord fields -> do
     let evalFields1 fields = case fields of
-          []                            -> Nothing
-          ((ln, vn) : fs) | isVal ctx vn -> do
+          []                         -> Nothing
+          ((ln, vn) : fs) | isVal vn -> do
             fs' <- evalFields1 fs
             return ((ln, vn) : fs')
           ((ln, tn) : fs) -> do
@@ -62,18 +55,18 @@ eval1 ctx t = case t of
             return ((ln, tn') : fs)
     fields' <- evalFields1 fields
     return (TmRecord fields')
-  TmProj v1@(TmRecord fields) l | isVal ctx v1 -> lookup l fields 
-  TmProj t1 l -> do
-    t1' <- eval1 ctx t1 
+  TmProj v1@(TmRecord fields) l | isVal v1 -> lookup l fields
+  TmProj t1 l                              -> do
+    t1' <- eval1 ctx t1
     return $ TmProj t1' l
-  TmTag l t1 ty -> do 
-    t1' <- eval1 ctx t1 
+  TmTag l t1 ty -> do
+    t1' <- eval1 ctx t1
     return $ TmTag l t1' ty
-  TmCase (TmTag ln v1 _) cases | isVal ctx v1 -> do
-    (xn, tn) <- lookup ln cases 
+  TmCase (TmTag ln v1 _) cases | isVal v1 -> do
+    (_, tn) <- lookup ln cases
     return $ termSubstTop v1 tn
-  TmCase t1 cases -> do 
-    t1' <- eval1 ctx t1 
+  TmCase t1 cases -> do
+    t1' <- eval1 ctx t1
     return $ TmCase t1' cases
   TmIf TmTrue  t2 _  -> return t2
   TmIf TmFalse _  t3 -> return t3
@@ -85,7 +78,7 @@ eval1 ctx t = case t of
   TmPred   (TmSucc nv1)                  -> return nv1
   TmPred   t1                            -> TmPred <$> eval1 ctx t1
   TmIsZero TmZero                        -> return TmTrue
-  TmIsZero (TmSucc nv1)                  -> return TmFalse
+  TmIsZero (TmSucc _)                    -> return TmFalse
   TmIsZero t1                            -> TmIsZero <$> eval1 ctx t1
   TmTimesFloat (TmFloat f1) (TmFloat f2) -> return $ TmFloat (f1 * f2)
   TmTimesFloat (TmFloat f1) t2           -> do
@@ -94,10 +87,10 @@ eval1 ctx t = case t of
   TmTimesFloat t1 t2 -> do
     t1' <- eval1 ctx t1
     return $ TmTimesFloat t1' t2
-  TmFix (TmAbs s ty t12) -> return $ termSubstTop t t12
-  TmFix t1               -> TmFix <$> eval1 ctx t1
+  TmFix (TmAbs _ _ t12) -> return $ termSubstTop t t12
+  TmFix t1              -> TmFix <$> eval1 ctx t1
 
-  _                      -> Nothing
+  _                     -> Nothing
 
 eval :: Context -> Term -> Term
 eval ctx t = maybe t (eval ctx) (eval1 ctx t)

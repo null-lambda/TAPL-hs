@@ -24,4 +24,5 @@ plus 5 6;
 plus 0 12;
 
 times 5 10;
+factorial 10;
 factorial 5;

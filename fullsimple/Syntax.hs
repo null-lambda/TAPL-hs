@@ -1,10 +1,8 @@
 module Syntax where
 
-import           Control.Monad.Except
 import           Data.Bifunctor
 import           Data.List
 import           Data.Maybe
-import           Debug.Trace
 import           Text.Read
 
 -- datatypes
@@ -59,6 +57,12 @@ data Command
 
 -- context 
 
+emptyContext :: Context
+emptyContext = []
+
+addBinding :: String -> Binding -> Context -> Context
+addBinding s b = ((s, b) :)
+
 indexToName :: Context -> Int -> String
 indexToName ctx i = fst (ctx !! i)
 
@@ -79,8 +83,8 @@ indexToBinding ctx i = bindingShift (i + 1) $ snd (ctx !! i)
 indexToBindingType :: Context -> Int -> Either String Ty
 indexToBindingType ctx i = case indexToBinding ctx i of
   VarBind ty            -> return ty
-  TmAbbBind t (Just ty) -> return ty
-  TmAbbBind t Nothing   -> Left $ "No type recorded for variable " ++ x
+  TmAbbBind _ (Just ty) -> return ty
+  TmAbbBind _ Nothing   -> Left $ "No type recorded for variable " ++ x
   _                     -> Left $ "wrong kind of binding for variable " ++ x
   where x = indexToName ctx i
 
@@ -159,13 +163,16 @@ showType :: Context -> Ty -> String
 showType = sp 0 where
   sp d ctx t = case t of
     TyVar i n -> if length ctx == n then indexToName ctx i else "[bad index]"
-    TyArrow ty1 ty2 -> parenIf (d > 5) $ sp 6 ctx ty1 ++ "->" ++ sp 5 ctx ty2
-    TyRecord fields -> "{" ++ intercalate ", " (map showRec fields) ++ "}"
+    TyArrow ty1 ty2 ->
+      concat [parenIf (d > 5) $ concat [sp 6 ctx ty1, "->", sp 5 ctx ty2]]
+    TyRecord fields -> concat
+      ["{" ++ intercalate ", " (map showRec fields) ++ "}"]
      where
       showRec (l, ty) = case readMaybe l :: Maybe Int of
         Just i | i >= 1 -> showType ctx ty
-        _               -> l ++ ":" ++ showType ctx ty
-    TyVariant fields -> "<" ++ intercalate ", " (map showRec fields) ++ ">"
+        _               -> concat [l, ":", showType ctx ty]
+    TyVariant fields -> concat
+      ["<" ++ intercalate ", " (map showRec fields) ++ ">"]
       where showRec (l, ty) = l ++ ":" ++ showType ctx ty
     TyUnit   -> "()"
     TyBool   -> "Bool"
@@ -188,7 +195,6 @@ showTerm :: Context -> Term -> String
 showTerm = sp 0 where
   parenIf b s = if b then "(" ++ s ++ ")" else s
   dInf = 10000
-  angular s = "<" ++ s ++ ">"
   showAsNum t acc = case t of
     TmZero    -> Just $ show acc
     TmSucc t1 -> showAsNum t1 (acc + 1)
@@ -200,36 +206,37 @@ showTerm = sp 0 where
       let (ctx', x') = pickFreshName ctx x
           sty        = showType ctx ty
           st         = sp 10 ctx' t
-      in  parenIf (d > 10) $ "\\" ++ x' ++ ":" ++ sty ++ ". " ++ st
-    TmApp t1 t2 -> parenIf (d > 11) $ sp 11 ctx t1 ++ " " ++ sp 12 ctx t2
+      in  parenIf (d > 10) $ concat ["\\", x', ":", sty, ". ", st]
+    TmApp t1 t2 ->
+      concat [parenIf (d > 11) $ concat [sp 11 ctx t1, " ", sp 12 ctx t2]]
     TmLet x t1 t2 ->
       let (ctx', x') = pickFreshName ctx x
           s1         = sp 10 ctx t1
           s2'        = sp 10 ctx' t2
-      in  parenIf (d > 10) $ "let " ++ x' ++ " = " ++ s1 ++ " in " ++ s2'
-    TmRecord fields -> "{" ++ intercalate "," (map showRec fields) ++ "}"
+      in  parenIf (d > 10) $ concat ["let ", x', " = ", s1, " in ", s2']
+    TmRecord fields -> concat ["{", intercalate "," (map showRec fields), "}"]
      where
       showRec (l, t) = case readMaybe l :: Maybe Int of
         Just i | i > 0 -> sp dInf ctx t
-        _              -> l ++ "=" ++ sp dInf ctx t
+        _              -> concat [l, "=", sp dInf ctx t]
     TmProj t1 l ->
-      let st1 = sp 21 ctx t1 in parenIf (d > 21) $ st1 ++ "." ++ l
+      let st1 = sp 21 ctx t1 in parenIf (d > 21) $ concat [st1, ".", l]
     TmTag l t1 tyT ->
       let st1  = sp dInf ctx t1
           styT = showType ctx tyT
-      in  "<" ++ l ++ "=" ++ st1 ++ "> as " ++ styT
+      in  concat ["<", l, "=", st1, "> as ", styT]
     TmCase t0 cases ->
       let st = sp 10 ctx t0
           showCase (ln, (xn, tn)) =
               let (ctx', xn') = pickFreshName ctx xn
                   stn         = sp 10 ctx' tn
-              in  "<" ++ ln ++ "=" ++ xn' ++ "> => " ++ stn
+              in  concat ["<", ln, "=", xn', "> => ", stn]
           scases = intercalate " | " $ map showCase cases
-      in  parenIf (d > 10) $ "case " ++ st ++ " of " ++ scases
+      in  parenIf (d > 10) $ concat ["case ", st, " of ", scases]
     TmAscrib t1 ty1 ->
       let st1  = sp 20 ctx t1
           sty1 = showType ctx ty1
-      in  parenIf (d > 20) $ st1 ++ " as " ++ sty1
+      in  parenIf (d > 20) $ concat [st1, " as ", sty1]
     TmUnit  -> "()"
     TmTrue  -> "true"
     TmFalse -> "false"
@@ -237,25 +244,27 @@ showTerm = sp 0 where
       let s1 = sp 10 ctx t1
           s2 = sp 10 ctx t2
           s3 = sp 10 ctx t3
-      in  parenIf (d > 10) ("if " ++ s1 ++ " then " ++ s2 ++ " else " ++ s3)
-    TmZero      -> "0"
-    TmSucc   t1 -> fromMaybe (unary "succ " d ctx t1) (showAsNum t1 1)
-    TmPred   t1 -> unary "pred " d ctx t1
-    TmIsZero t1 -> unary "iszero " d ctx t1
-    TmString s  -> "\"" ++ s ++ "\""
-    TmFloat  f  -> show f
-    TmTimesFloat t1 t2 ->
-      parenIf (d > 11) $ "timesfloat " ++ sp 12 ctx t1 ++ " " ++ sp 12 ctx t2
+      in  parenIf (d > 10) $ concat ["if ", s1, " then ", s2, " else ", s3]
+    TmZero             -> "0"
+    TmSucc   t1        -> fromMaybe (unary "succ " d ctx t1) (showAsNum t1 1)
+    TmPred   t1        -> unary "pred " d ctx t1
+    TmIsZero t1        -> unary "iszero " d ctx t1
+    TmString s         -> concat ["\"", s, "\""]
+    TmFloat  f         -> show f
+    TmTimesFloat t1 t2 -> parenIf (d > 11)
+      $ concat ["timesfloat ", sp 12 ctx t1, " ", sp 12 ctx t2]
     TmFix t1 -> unary "fix" d ctx t1
 
 showBinding :: Context -> Binding -> String
 showBinding ctx b = case b of
-  NameBind        -> ""
-  VarBind ty      -> " : " ++ showType ctx ty
-  TyVarBind       -> ""
-  TmAbbBind t mty -> " = " ++ showTerm ctx t ++ case mty of
-    Just ty -> " : " ++ showType ctx ty
-    Nothing -> ""
+  NameBind   -> ""
+  VarBind ty -> " : " ++ showType ctx ty
+  TyVarBind  -> ""
+  TmAbbBind t mty ->
+    let sty = case mty of
+          Just ty -> " : " ++ showType ctx ty
+          Nothing -> ""
+    in  concat [" = ", showTerm ctx t, sty]
   TyAbbBind ty -> " = " ++ showType ctx ty
 
 showContext :: Context -> String

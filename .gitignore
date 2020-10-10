@@ -1,7 +1,20 @@
 .stack-work/
 *~
-hie.yaml
-stack.yaml.lock
 .*.yaml
 *.cabal
 stack build
+*.o
+*.hi
+*.hie
+*.chi
+*.chs.h
+*.dyn_o
+*.dyn_hi
+.hpc
+.hsenv
+.prof
+*.aux
+*.hp
+*.eventlog
+hie.yaml
+stack.yaml.lock
