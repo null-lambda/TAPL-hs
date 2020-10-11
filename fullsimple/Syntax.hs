@@ -9,17 +9,12 @@ import           Text.Read
 
 -- datatypes
 
-
 data Ty
   = TyVar Int Int
   | TyArrow Ty Ty -- ty1 -> ty2
-
   | TyRecord [(String, Ty)] -- {l1:T1, ..., ln:Tn} // default value of ln = n
-
   | TyVariant [(String, Ty)] -- <l1:T1, ..., ln:Tn>
-
   | TyUnit -- ()
-
   | TyBool
   | TyNat
   | TyString
@@ -29,25 +24,17 @@ data Ty
 data Term
   = TmVar Int Int
   | TmAbs String Ty Term -- lambda x:T.t1 // \x:T.t1
-
   | TmApp Term Term -- t1 t2
-
   | TmLet String Term Term -- let x=t1 in t2
-
   | TmRecord [(String, Term)] -- {l1=t1, ..., ln=tn} // default value of ln = n
-
   | TmProj Term String   -- t1.ln
-
   | TmTag String Term Ty -- <l=t> as T
-
   | TmCase Term [(String, (String, Term))] {- case t1 of <l1=x1> ...  t t -}
   | TmAscrib Term Ty
   | TmUnit -- unit // () 
-
   | TmTrue
   | TmFalse
   | TmIf Term Term Term -- if t1 then t2 else t3
-
   | TmZero
   | TmSucc Term
   | TmPred Term
@@ -80,9 +67,7 @@ data IError
   | ETimeout
   | EMisc String
 
-
 -- context 
-
 
 emptyContext :: Context
 emptyContext = []
@@ -118,7 +103,6 @@ indexToBindingType ctx i = case indexToBinding ctx i of
 
 -- shifting & substitution on de brujin index
 
-
 typeMap :: (Int -> Int -> Int -> Ty) -> Int -> Ty -> Ty
 typeMap onVar = walk where
   walk c ty = case ty of
@@ -127,7 +111,6 @@ typeMap onVar = walk where
     TyRecord  fields -> TyRecord (map (second $ walk c) fields)
     TyVariant fields -> TyVariant (map (second $ walk c) fields)
     _                -> ty -- literal types
-
 
 typeShiftAbove :: Int -> Int -> Ty -> Ty
 typeShiftAbove d =
@@ -159,7 +142,6 @@ termMap onVar onType = walk where
     TmFix t1           -> TmFix (walk c t1)
     _                  -> t -- literal values 
 
-
 termShiftAbove :: Int -> Int -> Term -> Term
 termShiftAbove d = termMap
   (\c i n -> if i >= c then TmVar (i + d) (n + d) else TmVar i (n + d))
@@ -186,18 +168,12 @@ bindingShift d b = case b of
 
 -- printing
 
-
 showType :: Context -> Ty -> String
 {- 
-
 (precedence):
-
   Inf Atom Parens Brackets Tag
-
   15 Arrow 
-
   11 Application 
-
 -}
 showType = sp 0 where
   parenIf b s = if b then "(" ++ s ++ ")" else s
@@ -226,23 +202,14 @@ showType = sp 0 where
 
 showTerm :: Context -> Term -> String
 {-   
-
 (check grammar section in Parser.hs)
-
 precedence : 
-
   Inf Atom Parens Brackets Tag 
-
   21  Proj
-
   20  Ascription
-
   11  Application Ref Deref
-
   10  Abs If Let Case Assignment
-
   0~9 Binary operators
-
 -}
 showTerm = sp 0 where
   sp d ctx t =
