@@ -36,7 +36,8 @@ Example codes of TAPL, rewritten in haskell for personal study.
 ```
 * *[fullsimple](fullsimple)* (Ch. 9, 10, 11) - Extensions of **λ<sub>→</sub>**  
 ```
-    t   = A | (...)                                     (literal, variables, operations)
+    t   = A                                             (literal, variables)
+        | (...)                                         (operations)
         | ()                                            (unit)
         | t as T                                        (ascription)
         | let x=t in t                                  (let binding)
@@ -46,7 +47,7 @@ Example codes of TAPL, rewritten in haskell for personal study.
         | λ _:T. t | <l=_>                              (wildcard)
         | (t1; ...)                                     (sequencing
 
-    T   = A' | (...)                                    (base type, type variables)
+    T   = A'                                            (base type, type variables)
         | ()                                            (unit type)
         | {T1, ...} | {l1:T1, ...}                      (product type)
         | <l1:T1, ...>                                  (sum type)

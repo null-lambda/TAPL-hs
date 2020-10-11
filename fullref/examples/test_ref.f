@@ -18,6 +18,10 @@ o = {i = incc, d = decc};
 {o.i (), o.i (), o.i (), o.d()};
 !c;
 
+d = ref c; 
+e = ref d; 
+h = ref e;
+{h, !h, !(!h), !(!(!h))};
 
 NatArray = Ref (Nat->Nat);
 newarray = \_:(). ref (\n:Nat.0);

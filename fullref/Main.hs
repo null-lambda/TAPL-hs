@@ -40,11 +40,12 @@ processCommand cmd ctx store = do
         liftIO $ putStrLn $ "   => " ++ showTerm ctx term'
         return (ctx, store')
       CmdBind s b -> do
-        (store', b') <-
-          liftEither $ checkBinding ctx store b >>= evalBinding ctx store
-        let ctx' = addBinding s b' ctx
+        b'            <- liftEither $ checkBinding ctx store b
+        (store', b'') <- liftEither $ evalBinding ctx store b'
         liftIO . putStrLn $ "Bind> " ++ (s ++ showBinding ctx b')
-        return (ctx', store')
+        let ctx'    = addBinding s b'' ctx
+        let store'' = storeShift 1 store'
+        return (ctx', store'')
 
 processProgram :: String -> Context -> Store -> IO (Context, Store)
 processProgram input ctx store = case runParser program ctx "main" input of
@@ -70,17 +71,15 @@ runREPL progName = printHelp >> loop emptyContext emptyStore where
     putStrLn "\t<expression | binding> evaluate"
   loop :: Context -> Store -> IO ()
   loop ctx store = do
-    input <- putStr (progName ++ ">>> ") >> getLine
+    putStr (progName ++ ">>> ")
+    input <- getLine
     case take 2 input of
       ":q" -> return ()
       ":c" -> do
         putStrLn $ showContext ctx
         loop ctx store
       ":s" -> do
-        putStrLn
-          $   show
-          $   (\(t, ty) -> concat [showTerm ctx t, ":", showType ctx ty])
-          <$> store
+        putStrLn $ showStore ctx store
         loop ctx store
       _ -> do
         (ctx', store') <- processProgram input ctx store

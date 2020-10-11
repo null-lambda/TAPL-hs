@@ -240,7 +240,7 @@ showType = sp 0 where
         TyNat    -> "Nat"
         TyString -> "String"
         TyFloat  -> "Float"
-        TyRef ty -> "ref " ++ sp0 11 ty
+        TyRef ty -> parenIf (d > 11) $ "Ref " ++ sp0 12 ty
 
 showTerm :: Context -> Term -> String
 {-   
@@ -265,8 +265,9 @@ showTerm = sp 0 where
       unary name d t1 = parenIf (d > 11) $ name ++ sp0 12 t1
     in
       case t of
-        TmVar i n ->
-          if length ctx == n then indexToName ctx i else "[bad index]"
+        TmVar i n -> if length ctx == n
+          then indexToName ctx i
+          else "[bad index]" ++ show (i, n, length ctx)
         TmAbs x ty t ->
           let (ctx', x') = pickFreshName ctx x
               sty        = showType ctx ty
@@ -320,7 +321,7 @@ showTerm = sp 0 where
         TmTimesFloat t1 t2 ->
           parenIf (d > 11) $ concat ["timesfloat ", sp0 12 t1, " ", sp0 12 t2]
         TmFix   t1 -> unary "fix" d t1
-        TmLoc   i  -> concat ["<loc #", show i, ">"]
+        TmLoc   i  -> concat ["<loc#", show i, ">"]
         TmRef   t  -> parenIf (d > 11) $ concat ["ref ", sp0 12 t]
         TmDeref t  -> parenIf (d > 11) $ concat ["!", sp0 12 t]
         TmAssign t1 t2 ->
@@ -342,8 +343,13 @@ showContext :: Context -> String
 showContext ctx =
   let walk ((s, b) : ctx') = (s ++ showBinding ctx' b) : walk ctx'
       walk []              = []
-  in  "{" ++ intercalate ", " (reverse (walk ctx)) ++ "}"
+  in  concat ["{", intercalate ", " (reverse (walk ctx)), "}"]
 
+showStore :: Context -> Store -> String
+showStore ctx store =
+  let showKV (l, (t, ty)) = concat
+        ["!<loc#", show l, "> = ", showTerm ctx t, " : ", showType ctx ty]
+  in  concat ["{", intercalate ", " $ map showKV $ IntMap.assocs store, "}"]
 
 instance Show IError where
   show = \case
