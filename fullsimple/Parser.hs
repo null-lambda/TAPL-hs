@@ -8,10 +8,10 @@ where
 
 import           Control.Monad
 import           Control.Monad.State
+import           Control.Monad.Except
 import           Data.Char
 import           Data.Function
 import           Data.Void
-import           Data.Bifunctor
 import           Data.Functor.Identity
 import           Data.List
 import           Data.Maybe
@@ -44,6 +44,8 @@ reservedKeywords = Set.fromList
   , "Bool"
   , "Nat"
   , "Unit"
+  , "String"
+  , "Float"
   , "timesfloat"
   , "fix"
   , "as"
@@ -79,10 +81,8 @@ stringLiteral = char '"' *> manyTill L.charLiteral (char '"')
 parens = between (symbol "(") (symbol ")")
 angles = between (symbol "<") (symbol ">")
 curly = between (symbol "{") (symbol "}")
-colon = symbol ":"
 semicolon = symbol ";"
 comma = symbol ","
-dot = symbol "."
 
 leftRecursion :: (a -> Parser a) -> Parser a -> Parser a
 leftRecursion append base = do
@@ -118,6 +118,7 @@ infixR op p = e where
     return $ x `f` y
 
 -- type 
+
 tyBase :: Parser Ty
 tyBase = choice $ map
   (\(name, t) -> reserved name >> return t)
@@ -127,8 +128,10 @@ tyBase = choice $ map
   , ("String", TyString)
   , ("Float" , TyFloat)
   ]
+
 tyUnitAbb :: Parser Ty
 tyUnitAbb = symbol "()" >> return TyUnit
+
 tyVar :: Parser Ty
 tyVar = label "type variable" $ do
   x   <- typeName
@@ -143,13 +146,16 @@ tyVar = label "type variable" $ do
 tyArrow :: Parser Ty -> Parser Ty
 tyArrow = infixR (symbol "->" >> return TyArrow)
 
+
 recordLabel :: Parser String
 recordLabel = choice [identifier, show <$> natural1] where
   natural1 = do
     n <- natural
     if n >= 1 then return n else fail "record index must start with 1"
+
 variantLabel :: Parser String
 variantLabel = identifier
+
 tyRecord :: Parser Ty -> Parser Ty
 tyRecord baseType = label "record type" $ do
   rs <- curly $ flip sepBy1 comma $ do
@@ -159,6 +165,7 @@ tyRecord baseType = label "record type" $ do
   let defaultLabel = map show [1 ..]
   let rs' = zipWith (\i (ml, t1) -> (fromMaybe i ml, t1)) defaultLabel rs
   return $ TyRecord rs'
+
 tyVariant :: Parser Ty -> Parser Ty
 tyVariant baseType = label "variant type" $ do
   rs <- angles $ flip sepBy1 comma $ do
@@ -167,12 +174,12 @@ tyVariant baseType = label "variant type" $ do
     return (l, t1)
   return $ TyVariant rs
 
-tyAtom :: Parser Ty
 tyAtom = label "atomic type"
   $ choice [tyUnitAbb, parens ty, tyRecord ty, tyVariant ty, tyBase, tyVar]
-ty :: Parser Ty
-ty = label "type" $ tyArrow tyAtom
+tyArr = tyArrow tyAtom
 
+ty :: Parser Ty
+ty = label "type" $ tyArr
 -- term 
 
 tmVar :: Parser Term
@@ -186,6 +193,7 @@ tmVar = label "variable" $ try $ do
       where sctx = "{" ++ intercalate ", " (map fst ctx) ++ "}"
   let n = length ctx
   return (TmVar i n)
+
 tmAbs :: Parser Term -> Parser Term
 tmAbs baseTerm = label "lambda" $ do
   choice [reserved "lambda", void $ symbol "\x03bb", void $ symbol "\\"]
@@ -200,6 +208,7 @@ tmAbs baseTerm = label "lambda" $ do
   t1 <- baseTerm
   put ctx
   return $ foldr (uncurry TmAbs) t1 vs
+
 tmApp :: Parser Term -> Parser Term
 tmApp = infixL (return TmApp)
 
@@ -215,6 +224,7 @@ tmLet baseTerm = label "let" $ do
   t2 <- baseTerm
   put ctx
   return $ TmLet x t1 t2
+
 tmLetrec :: Parser Term -> Parser Term
 tmLetrec baseTerm = label "letrec" $ do
   reserved "letrec"
@@ -239,10 +249,12 @@ tmRecord baseTerm = label "record" $ do
   let defaultLabel = map show [1 ..]
   let rs' = zipWith (\i (ml, t1) -> (fromMaybe i ml, t1)) defaultLabel rs
   return $ TmRecord rs'
+
 tmProj :: Parser Term -> Parser Term
 tmProj = leftRecursion $ \t1 -> do
   symbol "."
   TmProj t1 <$> recordLabel
+
 tmTag :: Parser Term -> Parser Term
 tmTag baseTerm = label "tag" $ do
   symbol "<"
@@ -252,6 +264,7 @@ tmTag baseTerm = label "tag" $ do
   symbol ">"
   ty1 <- reserved "as" >> ty
   return $ TmTag l t1 ty1
+
 tmCase :: Parser Term -> Parser Term
 tmCase baseTerm = label "case" $ do
   reserved "case"
@@ -290,27 +303,33 @@ tmNat :: Parser Term
 tmNat = f <$> natural where
   f 0 = TmZero
   f n = TmSucc $ f (n - 1)
+
 tmFloat :: Parser Term
 tmFloat = TmFloat <$> try float
+
 tmString :: Parser Term
 tmString = TmString <$> try stringLiteral
+
 tmLiteral :: Parser Term
 tmLiteral = label "literal" $ choice $ r ++ [tmString, tmFloat, tmNat] where
   r = map (\(name, t) -> reserved name >> return t)
           [("unit", TmUnit), ("true", TmTrue), ("false", TmFalse)]
+
 tmUnaryFunc :: Parser Term -> Parser Term
 tmUnaryFunc baseTerm = choice $ map
   (\(name, f) -> reserved name >> f <$> baseTerm)
   [("succ", TmSucc), ("pred", TmPred), ("iszero", TmIsZero), ("fix", TmFix)]
+
 tmBinaryFunc :: Parser Term -> Parser Term
 tmBinaryFunc baseTerm = choice $ map
   (\(name, f) -> reserved name >> f <$> baseTerm <*> baseTerm)
   [("timesfloat", TmTimesFloat)]
+
 tmUnitAbb :: Parser Term
 tmUnitAbb = symbol "()" >> return TmUnit
 
-termSequence :: Parser Term
-termSequence = leftRecursion append term where
+termSeq :: Parser Term -> Parser Term
+termSeq = leftRecursion append where
   append t1 = do
     symbol ";"
     ctx <- get
@@ -322,12 +341,16 @@ termSequence = leftRecursion append term where
 -- grammar (overall precedence)
 
 expAtom = choice
-  [tmUnitAbb, parens termSequence, tmRecord term, tmTag term, tmVar, tmLiteral]
+  (  [tmUnitAbb]
+  ++ map ($ term) [parens . termSeq, tmRecord, tmTag]
+  ++ [tmVar, tmLiteral]
+  )
 expPath = (choice . map ($ expAtom)) [tmProj, id]
 expAsc = (choice . map ($ expPath)) [tmAscrib, id]
 expApp = (choice . map ($ expAsc)) [tmUnaryFunc, tmBinaryFunc, tmApp, id]
-exp10 =
-  (choice . map ($ term)) [tmAbs, tmIf, tmLet, tmLetrec, tmCase] <|> expApp
+exp10 :: StateT Context (ParsecT Void String Identity) Term
+exp10 = choice
+  (map ($ term) [tmAbs, tmIf, tmLet, tmLetrec, tmCase] ++ map ($ expApp) [id])
 exp0 = exp10
 term :: Parser Term
 term = exp0 <?> "term"
@@ -339,8 +362,8 @@ cmdEval = CmdEval <$> term
 
 tmBind :: Parser Binding
 tmBind = varBind <|> tmAbbBind where
-  varBind   = colon >> VarBind <$> ty
-  tmAbbBind = symbol "=" >> TmAbbBind <$> term <*> optional (colon >> ty)
+  varBind   = symbol ":" >> VarBind <$> ty
+  tmAbbBind = symbol "=" >> TmAbbBind <$> term <*> optional (symbol ":" >> ty)
 tyBind :: Parser Binding
 tyBind = tyAbbBind <|> tyVarBind where
   tyVarBind = return TyVarBind
@@ -361,8 +384,8 @@ program = spaces *> sepEndBy1 cmd semicolon <* eof
 -- running 
 
 runParser
-  :: Parser a -> Context -> String -> String -> Either String (a, Context)
+  :: Parser a -> Context -> String -> String -> Either IError (a, Context)
 runParser p state sourceName input =
   let p'     = runStateT p state
       output = P.runParser p' sourceName input
-  in  first errorBundlePretty output
+  in  either (throwError . EParse . errorBundlePretty) return output

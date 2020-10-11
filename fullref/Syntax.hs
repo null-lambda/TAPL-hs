@@ -353,11 +353,11 @@ showStore ctx store =
 
 instance Show IError where
   show = \case
-    EParse           s -> concat ["Parse failed\n", s]
-    ETypeMismatch    s -> concat ["Type mismatch \n", s]
-    EUnboundVar      s -> concat ["Unbound variable \n", s]
-    EUndefinedField  s -> concat ["Undefined label\n", s]
-    EMemoryViolation s -> concat ["Memory Violation\n", s]
+    EParse           s -> concat ["Parse failure\n", s]
+    ETypeMismatch    s -> concat ["Type mismatch\n", s]
+    EUnboundVar      s -> concat ["Unbound variable\n", s]
+    EUndefinedField  s -> concat ["Undefined field\n", s]
+    EMemoryViolation s -> concat ["Memory violation\n", s]
     ENoRuleApplies     -> undefined
     ETimeout           -> concat ["Timeout"]
     EMisc s            -> s

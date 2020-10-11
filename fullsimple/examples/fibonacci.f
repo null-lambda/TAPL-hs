@@ -1,4 +1,7 @@
 
+OptionalNat = <some:Nat, none:()>;
+Table = Nat -> OptionalNat;
+
 letrec fib:Table = (
     letrec plus : Nat->Nat->Nat = 
         λ m:Nat n:Nat.
@@ -15,8 +18,3 @@ letrec fib:Table = (
     ) in
     let f = λn:Nat. {n=n, fibn=fib n} in 
     {f 2, f 8, f 10};
-/*
-NatList = <nil:Unit, cons:{Nat,NatList}>;
-nil = <nil=unit> as NatList;
-cons = lambda n:Nat. lambda l:NatList. <cons={n,l}> as NatList;
-*/

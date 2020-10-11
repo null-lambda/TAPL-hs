@@ -18,7 +18,7 @@ isNatural t = case t of
 
 isVal :: Term -> Bool
 isVal t = case t of
-  TmAbs{}         -> True
+  TmAbs _ _ _     -> True
   TmRecord fields -> all (isVal . snd) fields
   TmTag _ t1 _    -> isVal t1
   TmUnit          -> True
@@ -81,9 +81,9 @@ eval1 ctx store t = runStateT (walk t) store where
       TmCase t1 cases -> do
         t1' <- walk t1
         return $ TmCase t1' cases
-      TmAscrib v1 _ | isVal v1 -> return v1 
-      TmAscrib t1 ty1 -> do 
-        t1' <- walk t1 
+      TmAscrib v1 _ | isVal v1 -> return v1
+      TmAscrib t1 ty1          -> do
+        t1' <- walk t1
         return $ TmAscrib t1' ty1
       TmIf TmTrue  t2 _  -> return t2
       TmIf TmFalse _  t3 -> return t3

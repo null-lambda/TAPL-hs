@@ -1,4 +1,3 @@
-/* test 0. simple boolean types */
 
 
  x:(Bool -> Bool) -> Bool -> Bool;
