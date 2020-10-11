@@ -52,7 +52,7 @@ Example codes of TAPL, rewritten in haskell for personal study.
         | {T1, ...} | {l1:T1, ...}                      (product type)
         | <l1:T1, ...>                                  (sum type)
 ``` 
-* *[fullref](fullref)* (Ch. 13, 18) - fullsimple + References with heap memory (store)
+* *[fullref](fullref)* (Ch. 13, 18) - Subtyping (**λ<sub>\<:</sub>**) with References 
 ```
     t   = (...)
         | ref t             (reference creation)
@@ -62,6 +62,8 @@ Example codes of TAPL, rewritten in haskell for personal study.
 
     T   = (...)
         | Ref T 
+        | Bot               (bottom type)
+        | Top               (maximum type)
 ```
 
 ## Running 

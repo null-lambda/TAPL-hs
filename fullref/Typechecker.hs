@@ -6,6 +6,7 @@ import           Control.Monad
 import           Control.Monad.Except
 import           Control.Monad.Reader
 import           Data.List
+import Data.Maybe
 
 import           Syntax
 
@@ -44,7 +45,79 @@ typeEquals ctx = walk where
     (TyString, TyString)    -> True
     (TyFloat, TyFloat)      -> True
     (TyRef ty1, TyRef ty2)  -> walk ty1 ty2
+    (TyTop, TyTop) -> True 
+    (TyBot, TyBot) -> True
     _                       -> False
+
+-- subtyping 
+
+subtype :: Context -> Ty -> Ty -> Bool
+subtype ctx tyS tyT =
+  typeEquals ctx tyS tyT
+    || let
+         tyS' = unwrapTypeAbb ctx tyS
+         tyT' = unwrapTypeAbb ctx tyT
+       in
+         case (tyS', tyT') of
+           (TyArrow tyS1 tyS2, TyArrow tyT1 tyT2) ->
+             subtype ctx tyT1 tyS1 && subtype ctx tyS2 tyT2
+           (TyRecord fS, TyRecord fT) -> flip all fT $ \(ln, tyTn) ->
+             case lookup ln fS of
+               Just tySn -> subtype ctx tySn tyTn
+               Nothing   -> False
+           (TyVariant fS, TyVariant fT) -> flip all fS $ \(ln, tySn) ->
+             case lookup ln fT of
+               Just tyTn -> subtype ctx tySn tyTn
+               Nothing   -> False
+           (TyRef tyS1, TyRef tyT1) ->
+             subtype ctx tyS1 tyT1 && subtype ctx tyT1 tyS1
+           (_, TyTop) -> True
+           (TyBot, _) -> True
+           _          -> False
+
+joinType :: Context -> Ty -> Ty -> Ty
+joinType ctx tyS tyT = case () of 
+  _ | subtype ctx tyS tyT -> tyT
+  _ | subtype ctx tyT tyS -> tyS 
+  _ -> let tyS' = unwrapTypeAbb ctx tyS
+           tyT' = unwrapTypeAbb ctx tyT
+    in  case (tyS', tyT') of 
+           (TyArrow tyS1 tyS2, TyArrow tyT1 tyT2) ->
+             TyArrow (meetType ctx tyT1 tyS1) (joinType ctx tyT2 tyS2)
+           (TyRecord fS, TyRecord fT) -> let 
+              lS = map fst fS 
+              lT = map fst fT
+              lJ = intersect lS lT 
+              fJ = flip map lJ $ \ln ->fromJust $ do 
+                tySn <- lookup ln fS 
+                tyTn <- lookup ln fT 
+                let tyJn =  joinType ctx tySn tyTn
+                return $ (ln, tyJn)
+             in TyRecord fJ
+           (TyRef _, TyRef _) -> TyTop
+           _          -> TyTop
+
+meetType :: Context -> Ty -> Ty -> Ty
+meetType ctx tyS tyT = case () of
+  _ | subtype ctx tyS tyT -> tyS
+  _ | subtype ctx tyT tyS -> tyT 
+  _ -> let tyS' = unwrapTypeAbb ctx tyS
+           tyT' = unwrapTypeAbb ctx tyT
+    in  case (tyS', tyT') of 
+           (TyArrow tyS1 tyS2, TyArrow tyT1 tyT2) ->
+             TyArrow (joinType ctx tyT1 tyS1) (meetType ctx tyT2 tyS2)
+           (TyRecord fS, TyRecord fT) -> let 
+              lS = map fst fS 
+              lT = map fst fT
+              lM = union lS lT 
+              fM = flip map lM $ \ln ->fromJust $ do 
+                tySn <- lookup ln fS 
+                tyTn <- lookup ln fT 
+                let tyJn =  meetType ctx tySn tyTn
+                return $ (ln, tyJn)
+             in TyRecord fM
+           (TyRef _, TyRef _) -> TyBot
+           _          -> TyBot
 
 -- typing
 
@@ -69,9 +142,10 @@ typeof ctx store t = runReaderT (walk t) ctx where
         ty1 <- walk t1
         ty2 <- walk t2
         case unwrapTypeAbb ctx ty1 of
-          TyArrow ty11 ty12 | typeEquals ctx ty11 ty2 -> return ty12
+          TyArrow ty11 ty12 | subtype ctx ty2 ty11 -> return ty12
           TyArrow _ _ -> throwError $ ETypeMismatch $ concat
             ["parameter type mismatch on \"", showTerm ctx t, "\""]
+          TyBot -> return TyBot
           _ -> throwError $ ETypeMismatch $ concat
             ["expected arrow type on \"" ++ showTerm ctx t1 ++ "\""]
       TmLet s t1 t2 -> do
@@ -92,6 +166,7 @@ typeof ctx store t = runReaderT (walk t) ctx where
                   (throwError $ EMisc $ concat ["field ", l, " not found"])
                   (liftEither . return)
                   mty
+          TyBot -> return TyBot
           _ -> throwError $ ETypeMismatch $ "expected record type"
       TmTag l t1 ty1 -> case unwrapTypeAbb ctx ty1 of
         TyVariant fields -> do
@@ -101,7 +176,7 @@ typeof ctx store t = runReaderT (walk t) ctx where
             (throwError $ EUndefinedField $ concat ["field ", l, " not found"])
             (liftEither . return)
             mty2
-          if typeEquals ctx ty1Field ty2
+          if subtype ctx ty1Field ty2
             then return ty1
             else throwError $ ETypeMismatch "field does not have expected type"
         _ -> throwError $ ETypeMismatch "tag annotation is not a variant type"
@@ -116,19 +191,14 @@ typeof ctx store t = runReaderT (walk t) ctx where
                   ["label ", ln, " not in type"]
               let modifyCtx = addBinding xn (VarBind tyN)
               typeShift (-1) <$> (local modifyCtx $ walk tn)
-            let tyTag1 = head caseTypes
-            forM_ (tail caseTypes) $ \tyTagN -> unless
-              (typeEquals ctx tyTag1 tyTagN)
-              (throwError $ ETypeMismatch
-                "fields of case statement do not have the same type"
-              )
-            return tyTag1
+            return $ foldl' (joinType ctx) TyBot caseTypes
+          TyBot -> return TyBot
           _ -> throwError $ ETypeMismatch $ concat
             ["expected variant type on \"", showType ctx ty0, "\""]
       TmUnit            -> return TyUnit
       TmAscrib t1 tyAsc -> do
         ty1 <- walk t1
-        unless (typeEquals ctx ty1 tyAsc) $ throwError $ ETypeMismatch
+        unless (subtype ctx ty1 tyAsc) $ throwError $ ETypeMismatch
           "body of as-term does not have the expected type"
         return tyAsc
       TmTrue        -> return TyBool
@@ -137,11 +207,9 @@ typeof ctx store t = runReaderT (walk t) ctx where
         ty1 <- walk t1
         ty2 <- walk t2
         ty3 <- walk t3
-        case ty1 of
-          TyBool | typeEquals ctx ty2 ty3 -> return ty2
-          TyBool                          -> throwError
-            $ ETypeMismatch "arms of conditional has different types"
-          _ -> throwError $ ETypeMismatch "guard of conditional not a boolean"
+        if subtype ctx ty1 TyBool  
+          then return $ joinType ctx ty2 ty3
+        else throwError $ ETypeMismatch "guard of conditional not a boolean"
       TmZero             -> return TyNat
       TmSucc   t1        -> unary "succ" t1 TyNat TyNat
       TmPred   t1        -> unary "pred" t1 TyNat TyNat
@@ -151,17 +219,18 @@ typeof ctx store t = runReaderT (walk t) ctx where
       TmTimesFloat t1 t2 -> do
         ty1 <- walk t1
         ty2 <- walk t2
-        if typeEquals ctx ty1 TyFloat && typeEquals ctx ty2 TyFloat
+        if subtype ctx ty1 TyFloat && subtype ctx ty2 TyFloat
           then return TyFloat
           else throwError
             $ ETypeMismatch "argument of timesfloat is not a float"
       TmFix t1 -> do
         ty1 <- walk t1
         case ty1 of
-          TyArrow ty11 ty12 -> if typeEquals ctx ty11 ty12
-            then return ty11
+          TyArrow ty11 ty12 -> if subtype ctx ty12 ty11
+            then return ty12
             else throwError
               $ ETypeMismatch "result of body not compatible with domain"
+          TyBot -> return TyBot
           _ -> throwError $ ETypeMismatch "arrow type expected"
       TmLoc l -> do
         (_, ty) <- liftEither $ locationToCell store l
@@ -171,17 +240,15 @@ typeof ctx store t = runReaderT (walk t) ctx where
         return $ TyRef ty1
       TmDeref t1 -> unwrapTypeAbb ctx <$> walk t1 >>= \case
         TyRef ty11 -> return ty11
+        TyBot -> return TyBot
         _          -> throwError $ ETypeMismatch "argument of ! is not a Ref"
       TmAssign t1 t2 -> do
         ty1 <- unwrapTypeAbb ctx <$> walk t1
         case ty1 of
           TyRef ty11 -> do
-            ty2 <- unwrapTypeAbb ctx <$> walk t2
-            if typeEquals ctx ty11 ty2
+            ty2 <- walk t2
+            if subtype ctx ty2 ty11
               then return TyUnit
               else throwError $ ETypeMismatch "arguments of := are incompatible"
+          TyBot -> walk t2 >> return TyBot
           _ -> throwError $ ETypeMismatch "left-hand side of := is not a ref"
-
-
-
-

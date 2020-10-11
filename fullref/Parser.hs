@@ -53,6 +53,7 @@ reservedKeywords = Set.fromList
   , "of"
   , "ref"
   , "Ref"
+  , "Top","Bot"
   ]
 isReservedName :: [Char] -> Bool
 isReservedName = (`Set.member` reservedKeywords)
@@ -129,6 +130,8 @@ tyBase = choice $ map
   , ("Nat"   , TyNat)
   , ("String", TyString)
   , ("Float" , TyFloat)
+  , ("Top"   , TyTop),
+  ("Bot", TyBot)
   ]
 
 tyUnitAbb :: Parser Ty
@@ -314,7 +317,7 @@ tmRef baseTerm = label "reference" $ reserved "ref" >> TmRef <$> baseTerm
 
 tmDeref :: Parser Term -> Parser Term
 tmDeref baseTerm = label "dereference" $ do
-  symbol "!" 
+  symbol "!"
   TmDeref <$> baseTerm
 
 tmAssign :: Parser Term -> Parser Term

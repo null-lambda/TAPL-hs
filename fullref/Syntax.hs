@@ -21,6 +21,8 @@ data Ty
   | TyString
   | TyFloat
   | TyRef Ty
+  | TyTop
+  | TyBot
   deriving Show
 
 data Term
@@ -140,12 +142,8 @@ typeMap onVar = walk where
     TyArrow ty1 ty2  -> TyArrow (walk c ty1) (walk c ty2)
     TyRecord  fields -> TyRecord (map (second $ walk c) fields)
     TyVariant fields -> TyVariant (map (second $ walk c) fields)
-    TyUnit           -> TyUnit
-    TyBool           -> TyBool
-    TyNat            -> TyNat
-    TyString         -> TyString
-    TyFloat          -> TyFloat
-    TyRef ty1        -> TyRef (walk c ty1)
+    TyRef     ty1    -> TyRef (walk c ty1)
+    _                -> ty -- literal types
 
 typeShiftAbove :: Int -> Int -> Ty -> Ty
 typeShiftAbove d =
@@ -241,6 +239,8 @@ showType = sp 0 where
         TyString -> "String"
         TyFloat  -> "Float"
         TyRef ty -> parenIf (d > 11) $ "Ref " ++ sp0 12 ty
+        TyTop    -> "Top"
+        TyBot -> "Bot"
 
 showTerm :: Context -> Term -> String
 {-   

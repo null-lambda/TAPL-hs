@@ -81,6 +81,10 @@ eval1 ctx store t = runStateT (walk t) store where
       TmCase t1 cases -> do
         t1' <- walk t1
         return $ TmCase t1' cases
+      TmAscrib v1 _ | isVal v1 -> return v1 
+      TmAscrib t1 ty1 -> do 
+        t1' <- walk t1 
+        return $ TmAscrib t1' ty1
       TmIf TmTrue  t2 _  -> return t2
       TmIf TmFalse _  t3 -> return t3
       TmIf t1      t2 t3 -> do
